@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0c0f1e">
+<title>パズルRPG 試作</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Barlow+Condensed:ital,wght@1,700;1,800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0c0f1e;--ink:#eef1ff;--sub:#8d93b8;--line:rgba(255,255,255,.12);
+  --fire:#ff5b4d;--water:#3ea4ff;--wood:#3ccf6e;--light:#ffd23e;--dark:#b45cff;--heart:#ff7ab9}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:'Noto Sans JP',sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+.num{font-family:'Barlow Condensed',sans-serif;font-style:italic;font-weight:800}
+.scr{position:fixed;inset:0;display:none;flex-direction:column}
+.scr.on{display:flex}
+
+/* ===== ホーム ===== */
+#home{background:radial-gradient(120% 70% at 50% 30%,#2a2257 0%,#12142c 60%,#0c0f1e 100%)}
+#home .art{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 40px);width:118%;max-width:560px;transform:translateX(-50%);pointer-events:none;filter:drop-shadow(0 10px 30px rgba(0,0,0,.5));animation:breath 5s ease-in-out infinite}
+@keyframes breath{50%{transform:translateX(-50%) translateY(-6px)}}
+#home .top{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:center;padding:calc(env(safe-area-inset-top) + 12px) 16px 0}
+.rank{display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.35);border:1px solid var(--line);padding:6px 12px;border-radius:999px;font-size:12px}
+.rank b{font-size:18px}
+.talk{position:absolute;z-index:3;left:16px;right:16px;bottom:200px;background:rgba(10,12,30,.82);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.6;opacity:0;transform:translateY(8px);transition:.25s}
+.talk.on{opacity:1;transform:none}
+.talk b{display:block;font-size:11px;color:var(--heart);letter-spacing:.1em;margin-bottom:2px}
+.hnav{position:absolute;z-index:3;left:0;right:0;bottom:0;padding:0 16px calc(env(safe-area-inset-bottom) + 16px);display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hbtn{height:58px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid var(--line);font-weight:700;font-size:15px;backdrop-filter:blur(6px)}
+.hbtn.go{grid-column:1/3;height:72px;font-size:22px;font-weight:900;background:linear-gradient(135deg,#ff7ab9,#8f5cff);border:0;box-shadow:0 8px 24px rgba(180,92,255,.45);letter-spacing:.1em}
+.hbtn:active{transform:scale(.97)}
+
+/* ===== キャラ一覧 ===== */
+#list{background:#10132a}
+.bar{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;border-bottom:1px solid var(--line)}
+.bar h2{font-size:16px;flex:1}
+.back{font-size:14px;color:var(--sub);padding:6px 0}
+.party{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;padding:14px 16px}
+.slot{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;border:2px solid var(--line);background:#1a1d3a}
+.slot img{width:100%;height:100%;object-fit:cover}
+.slot .at{position:absolute;right:2px;bottom:2px;width:14px;height:14px;border-radius:50%;border:2px solid #fff}
+.slot.lead::after,.slot.frd::after{content:'L';position:absolute;left:0;top:0;font-size:10px;font-weight:900;background:#ffd23e;color:#000;padding:0 5px;border-radius:0 0 6px 0}
+.slot.frd::after{content:'F';background:#7ef}
+.cap{font-size:11px;color:var(--sub);padding:0 16px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 16px;overflow:auto}
+.detail{position:fixed;inset:0;z-index:20;background:rgba(5,6,16,.92);display:none;flex-direction:column;overflow:auto}
+.detail.on{display:flex}
+.detail img{width:100%;max-width:520px;margin:calc(env(safe-area-inset-top) + 8px) auto 0}
+.dbox{padding:0 16px calc(env(safe-area-inset-bottom) + 20px);max-width:560px;margin:0 auto;width:100%}
+.dbox h3{font-size:22px;display:flex;align-items:center;gap:8px}
+.stat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+.stat div{background:rgba(255,255,255,.06);border-radius:8px;padding:6px 10px;font-size:11px;color:var(--sub)}
+.stat b{display:block;font-size:20px;color:var(--ink)}
+.sk{background:rgba(255,255,255,.06);border-radius:10px;padding:10px 12px;margin-top:8px;font-size:13px;line-height:1.6}
+.sk em{font-style:normal;font-size:11px;color:var(--sub);display:block}
+.dbtns{display:flex;gap:8px;margin-top:14px}
+.dbtns button{flex:1;height:46px;border-radius:10px;background:rgba(255,255,255,.1);font-weight:700}
+
+/* ===== バトル ===== */
+#battle{background:#090b18}
+#field{position:relative;flex:1;min-height:0;overflow:hidden;background:radial-gradient(90% 80% at 50% 70%,#2b2650 0%,#121430 70%)}
+#field::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(115deg,transparent 0 22px,rgba(255,255,255,.025) 22px 23px)}
+.bhead{position:absolute;z-index:3;left:0;right:0;top:0;display:flex;justify-content:space-between;align-items:center;padding:calc(env(safe-area-inset-top) + 8px) 12px 0;font-size:12px;color:var(--sub)}
+.bhead b{font-size:22px;color:var(--ink)}
+.menu{background:rgba(0,0,0,.4);border:1px solid var(--line);border-radius:8px;padding:4px 10px;font-size:12px}
+#enemies{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:center;gap:4px;padding:0 8px 26px}
+.en{position:relative;display:flex;flex-direction:column;align-items:center;transition:opacity .4s,transform .4s}
+.en.tgt .ebody{filter:drop-shadow(0 0 10px #fff)}
+.en.tgt::before{content:'';position:absolute;top:-14px;width:0;height:0;border:7px solid transparent;border-top-color:#fff;animation:bob 1s infinite}
+@keyframes bob{50%{transform:translateY(4px)}}
+.en.dead{opacity:0;transform:scale(.6) translateY(20px)}
+.ebody{display:block}
+.en.hit .ebody{animation:hit .25s}
+@keyframes hit{30%{transform:translateX(-6px);filter:brightness(2.2)}60%{transform:translateX(5px)}}
+.cd{position:absolute;top:2px;left:50%;transform:translateX(-50%);font-size:11px;background:rgba(0,0,0,.55);border-radius:6px;padding:1px 6px;white-space:nowrap}
+.cd b{font-size:15px;color:#ffd23e}
+.cd.warn b{color:#ff5b4d}
+.ehp{width:100%;height:6px;background:rgba(0,0,0,.5);border-radius:3px;overflow:hidden;margin-top:4px}
+.ehp i{display:block;height:100%;background:linear-gradient(90deg,#ff5b4d,#ffb24d);transition:width .35s}
+.pop{position:absolute;z-index:9;font-size:26px;pointer-events:none;text-shadow:0 2px 0 #000,0 0 8px rgba(0,0,0,.8);animation:pop .9s forwards}
+@keyframes pop{0%{transform:translate(-50%,0) scale(.6);opacity:0}15%{transform:translate(-50%,-14px) scale(1.15);opacity:1}100%{transform:translate(-50%,-46px);opacity:0}}
+#combo{position:absolute;z-index:6;right:12px;top:42%;font-size:40px;opacity:0;transition:opacity .2s;text-shadow:0 3px 0 rgba(0,0,0,.6)}
+#combo small{font-size:16px}
+#combo.on{opacity:1}
+#timer{position:absolute;z-index:6;left:0;right:0;bottom:0;height:5px;background:rgba(255,255,255,.08)}
+#timer i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#3ea4ff,#7ef);transform-origin:left}
+#cutin{position:absolute;inset:0;z-index:8;pointer-events:none;overflow:hidden;display:none}
+#cutin.on{display:block}
+#cutin .band{position:absolute;left:-10%;right:-10%;top:18%;height:64%;transform:skewY(-8deg);background:linear-gradient(90deg,rgba(0,0,0,.7),rgba(40,20,80,.8));animation:band .9s forwards}
+#cutin img{position:absolute;height:120%;top:-6%;right:-6%;animation:cin .9s cubic-bezier(.2,.8,.2,1) forwards}
+#cutin p{position:absolute;left:16px;bottom:24%;font-size:20px;font-weight:900;animation:ctx .9s forwards;text-shadow:0 2px 0 #000}
+@keyframes band{0%{transform:skewY(-8deg) scaleY(0)}15%,80%{transform:skewY(-8deg) scaleY(1)}100%{transform:skewY(-8deg) scaleY(0)}}
+@keyframes cin{0%{transform:translateX(60%);opacity:0}20%,80%{transform:none;opacity:1}100%{transform:translateX(-20%);opacity:0}}
+@keyframes ctx{0%{transform:translateX(-30px);opacity:0}25%,80%{transform:none;opacity:1}100%{opacity:0}}
+.shake{animation:shake .35s}
+@keyframes shake{20%{transform:translate(-6px,3px)}40%{transform:translate(5px,-4px)}60%{transform:translate(-4px,2px)}80%{transform:translate(3px,0)}}
+
+.pt{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;padding:6px 8px 4px;background:#0e1124}
+.pm{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;border:2px solid rgba(255,255,255,.15)}
+.pm img{width:100%;height:100%;object-fit:cover}
+.pm .at{position:absolute;right:2px;bottom:2px;width:11px;height:11px;border-radius:50%;border:1.5px solid #fff}
+.pm .sc{position:absolute;left:0;right:0;bottom:0;font-size:10px;text-align:center;background:rgba(0,0,0,.6);line-height:14px}
+.pm.ready{border-color:#fff;box-shadow:0 0 0 2px var(--c),0 0 14px var(--c);animation:rd 1.2s infinite}
+@keyframes rd{50%{box-shadow:0 0 0 2px var(--c),0 0 4px var(--c)}}
+.pm.ready .sc{background:var(--c);color:#000;font-weight:900}
+.pm.atk{animation:atk .35s}
+@keyframes atk{40%{transform:translateY(-8px) scale(1.08)}}
+.pm .dmg{position:absolute;left:50%;top:0;font-size:14px;transform:translateX(-50%);text-shadow:0 1px 0 #000}
+.hp{position:relative;height:18px;margin:0 8px 6px;background:#231a2c;border-radius:4px;overflow:hidden}
+.hp i{position:absolute;inset:0;background:linear-gradient(90deg,#3ccf6e,#9df07a);transform-origin:left;transition:transform .35s}
+.hp.low i{background:linear-gradient(90deg,#ff5b4d,#ff9a4d)}
+.hp span{position:absolute;inset:0;text-align:center;font-size:12px;line-height:18px;text-shadow:0 1px 0 #000}
+.hp .sh{position:absolute;left:6px;top:0;font-size:10px;line-height:18px;color:#7ef;display:none}
+.hp .sh.on{display:block}
+#board{display:block;touch-action:none;margin:0 auto calc(env(safe-area-inset-bottom) + 4px)}
+
+/* ===== リザルト ===== */
+.over{position:fixed;inset:0;z-index:30;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:rgba(5,6,16,.85);backdrop-filter:blur(4px)}
+.over.on{display:flex}
+.over h2{font-size:44px;letter-spacing:.06em}
+.over p{color:var(--sub);font-size:14px}
+.over button{width:220px;height:52px;border-radius:12px;background:rgba(255,255,255,.12);font-weight:700}
+.over button.go{background:linear-gradient(135deg,#ff7ab9,#8f5cff)}
+.toast{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);z-index:40;background:rgba(0,0,0,.8);padding:10px 18px;border-radius:10px;font-size:14px;opacity:0;transition:.2s;pointer-events:none}
+.toast.on{opacity:1}
+</style>
+</head>
+<body>
+
+<!-- ホーム -->
+<section class="scr on" id="home">
+  <img class="art" id="homeArt" alt="">
+  <div class="top">
+    <div class="rank">RANK <b class="num">1</b></div>
+    <div class="rank">試作版</div>
+  </div>
+  <div class="talk" id="talk"><b id="talkName"></b><span id="talkText"></span></div>
+  <div class="hnav">
+    <button class="hbtn go" id="goQuest">出撃</button>
+    <button class="hbtn" id="goList">編成・キャラ</button>
+    <button class="hbtn" id="goTalk">話す</button>
+  </div>
+</section>
+
+<!-- キャラ一覧 -->
+<section class="scr" id="list">
+  <div class="bar"><button class="back" data-home>← ホーム</button><h2>編成</h2></div>
+  <div class="party" id="party"></div>
+  <p class="cap">タップで詳細。詳細から「リーダーにする」「フレンドにする」を選べます。</p>
+  <div class="grid" id="grid"></div>
+</section>
+<div class="detail" id="detail"></div>
+
+<!-- バトル -->
+<section class="scr" id="battle">
+  <div id="field">
+    <div class="bhead"><button class="menu" id="retreat">撤退</button><div>FLOOR <b class="num" id="floor">1/3</b></div></div>
+    <div id="enemies"></div>
+    <div id="combo" class="num"></div>
+    <div id="cutin"><div class="band"></div><img alt=""><p></p></div>
+    <div id="timer"><i></i></div>
+  </div>
+  <div class="pt" id="pt"></div>
+  <div class="hp" id="hp"><i></i><b class="sh" id="shield">盾</b><span class="num"></span></div>
+  <canvas id="board"></canvas>
+</section>
+
+<div class="over" id="over"><h2 class="num" id="ovT"></h2><p id="ovP"></p><button class="go" id="ovA"></button><button data-home>ホームへ</button></div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+// ================= データ =================
+// 属性：fire 火 / water 水 / wood 木 / light 光 / dark 闇（heart は回復の玉）
+const ATTR = {
+  fire:{n:'火',c:'#ff5b4d'}, water:{n:'水',c:'#3ea4ff'}, wood:{n:'木',c:'#3ccf6e'},
+  light:{n:'光',c:'#ffd23e'}, dark:{n:'闇',c:'#b45cff'}, heart:{n:'回復',c:'#ff7ab9'}
+};
+const ORBS = ['fire','water','wood','light','dark','heart'];
+// 有利属性：火→木→水→火、光⇔闇
+const STRONG = {fire:'wood', wood:'water', water:'fire', light:'dark', dark:'light'};
+
+// リーダースキル（型）
+//  attr:{attrs,atk,hp}  指定属性の能力を倍  / combo:{min,atk} ○コンボ以上で攻撃倍
+//  len:{min,atk} ○個以上つなぐと攻撃倍 / all:{atk,rcv}
+// スキル（型）
+//  conv:{from,to} 色変換 / board:{colors} 盤面変更 / nuke:{mult,attr} 固定倍率攻撃
+//  heal:{all} 回復 / shield:{rate,turns} 被ダメ軽減 / time:{sec,turns} 操作時間延長 / boost:{attr,atk,turns}
+// 名前は仮です。自由に書き換えてください。
+const CHARS = [
+  {id:'noa', name:'乃亜', attr:'light', hp:3100, atk:1250, rcv:320,
+   ls:{t:'attr', attrs:['light','dark'], atk:2.5, txt:'光と闇属性の攻撃力が2.5倍'},
+   sk:{t:'board', colors:['light','dark','heart'], cd:9, nm:'ねこの手ルーレット', txt:'盤面を光・闇・回復に変える'},
+   lines:['ようへい、今日も来てくれたんですね。','お疲れさまです。少しだけ、休んでいきませんか。','……そんなに見られると、照れます。']},
+  {id:'yuuka', name:'ユウカ', attr:'water', hp:3400, atk:1050, rcv:280,
+   ls:{t:'combo', min:5, atk:3, txt:'5コンボ以上で攻撃力が3倍'},
+   sk:{t:'time', sec:3, turns:2, cd:6, nm:'演算サポート', txt:'2ターンの間、操作時間を3秒延長'},
+   lines:['予算の計算なら任せてください。','無駄な動きは減らしましょう。']},
+  {id:'mika', name:'ミカ', attr:'light', hp:2800, atk:1500, rcv:260,
+   ls:{t:'len', min:7, atk:4, txt:'7個以上つなぐと攻撃力が4倍'},
+   sk:{t:'nuke', mult:40, attr:'light', cd:8, nm:'星の祈り', txt:'敵全体に攻撃力40倍の光属性ダメージ'},
+   lines:['ふふ、今日はどこに連れていってくれるの？']},
+  {id:'hoshino', name:'ホシノ', attr:'fire', hp:3800, atk:1150, rcv:240,
+   ls:{t:'attr', attrs:['fire'], atk:2, hp:1.5, txt:'火属性のHPが1.5倍、攻撃力が2倍'},
+   sk:{t:'shield', rate:.5, turns:2, cd:6, nm:'盾を構える', txt:'2ターンの間、受けるダメージを半減'},
+   lines:['前は任せて。後ろは頼んだよ。']},
+  {id:'maid', name:'メイド（仮）', attr:'dark', hp:2900, atk:1450, rcv:200,
+   ls:{t:'attr', attrs:['dark'], atk:3, txt:'闇属性の攻撃力が3倍'},
+   sk:{t:'conv', from:'fire', to:'dark', cd:5, nm:'掃除の時間', txt:'火の玉を闇の玉に変える'},
+   lines:['……仕事だから、やるだけ。']},
+  {id:'china', name:'チャイナ（仮）', attr:'wood', hp:3000, atk:1100, rcv:420,
+   ls:{t:'all', atk:1.5, rcv:1.5, txt:'全員の攻撃力と回復力が1.5倍'},
+   sk:{t:'heal', all:true, cd:7, nm:'お茶の時間', txt:'HPを全回復'},
+   lines:['お茶でもいかがかしら。']},
+];
+const byId = id => CHARS.find(c => c.id === id);
+
+// ダンジョン（敵は仮の図形。画像ができたら img を入れる）
+const DUNGEON = { name:'試しの回廊', floors:[
+  [{n:'スライム', attr:'fire', hp:9000, atk:1400, cd:2}, {n:'スライム', attr:'water', hp:9000, atk:1400, cd:3}],
+  [{n:'ゴーレム', attr:'wood', hp:16000, atk:2200, cd:2}, {n:'スライム', attr:'dark', hp:9000, atk:1400, cd:1}, {n:'スライム', attr:'light', hp:9000, atk:1400, cd:3}],
+  [{n:'番人ドラゴン', attr:'dark', hp:120000, atk:5200, cd:3, boss:true}],
+]};
+
+// 編成（保存はこの端末だけ）
+let save = {party:['noa','yuuka','mika','hoshino','maid'], friend:'china', homeChar:'noa'};
+try { const s = JSON.parse(localStorage.getItem('pz-save')); if (s) save = Object.assign(save, s); } catch(e) {}
+const store = () => { try { localStorage.setItem('pz-save', JSON.stringify(save)); } catch(e) {} };
+
+// ================= 共通 =================
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const vib = (ms=8) => { try { navigator.vibrate && navigator.vibrate(ms); } catch(e) {} };
+function show(id) { document.querySelectorAll('.scr').forEach(s => s.classList.toggle('on', s.id === id)); }
+function toast(t) { const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove('on'), 1400); }
+document.addEventListener('click', e => { if (e.target.closest('[data-home]')) goHome(); });
+
+// 効果音（その場で合成）
+let AC = null;
+function snd(f, d=.08, v=.05, type='sine') {
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    const o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime;
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+    o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + d + .02);
+  } catch(e) {}
+}
+
+// ================= ホーム =================
+function goHome() {
+  $('over').classList.remove('on'); $('detail').classList.remove('on');
+  const c = byId(save.homeChar) || CHARS[0];
+  $('homeArt').src = 'ch_' + c.id + '.webp';
+  show('home'); setTimeout(talk, 500);
+}
+function talk() {
+  const c = byId(save.homeChar) || CHARS[0];
+  $('talkName').textContent = c.name;
+  $('talkText').textContent = c.lines[Math.floor(Math.random() * c.lines.length)];
+  $('talk').classList.add('on'); clearTimeout(talk.t); talk.t = setTimeout(() => $('talk').classList.remove('on'), 3600);
+}
+$('homeArt').parentElement.addEventListener('click', e => { if (!e.target.closest('button')) talk(); });
+$('goTalk').onclick = talk;
+$('goList').onclick = () => { paintList(); show('list'); };
+$('goQuest').onclick = () => startBattle();
+
+// ================= 編成 =================
+function slotHTML(id, cls='') {
+  const c = byId(id);
+  return `<button class="slot ${cls}" data-id="${id}"><img src="ic_${id}.webp" alt=""><i class="at" style="background:${ATTR[c.attr].c}"></i></button>`;
+}
+function paintList() {
+  $('party').innerHTML = save.party.map((id, i) => slotHTML(id, i === 0 ? 'lead' : '')).join('') + slotHTML(save.friend, 'frd');
+  $('grid').innerHTML = CHARS.map(c => slotHTML(c.id)).join('');
+}
+$('list').addEventListener('click', e => { const b = e.target.closest('.slot'); if (b) openDetail(b.dataset.id); });
+function openDetail(id) {
+  const c = byId(id), a = ATTR[c.attr];
+  const d = $('detail');
+  d.innerHTML = `<img src="ch_${id}.webp" alt="">
+    <div class="dbox"><h3><i style="width:14px;height:14px;border-radius:50%;background:${a.c}"></i>${c.name}<small style="font-size:12px;color:var(--sub)">${a.n}属性</small></h3>
+    <div class="stat"><div>HP<b class="num">${c.hp}</b></div><div>攻撃<b class="num">${c.atk}</b></div><div>回復<b class="num">${c.rcv}</b></div></div>
+    <div class="sk"><em>リーダースキル</em>${c.ls.txt}</div>
+    <div class="sk"><em>スキル（${c.sk.cd}ターン）　${c.sk.nm}</em>${c.sk.txt}</div>
+    <div class="dbtns"><button data-a="lead">リーダーにする</button><button data-a="frd">フレンドにする</button></div>
+    <div class="dbtns"><button data-a="home">ホームに置く</button><button data-a="close">閉じる</button></div></div>`;
+  d.classList.add('on'); d.scrollTop = 0;
+  d.onclick = e => {
+    const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return;
+    if (a === 'lead') { save.party = [id, ...save.party.filter(x => x !== id)].slice(0, 5); if (save.friend === id) save.friend = CHARS.find(x => !save.party.includes(x.id))?.id || id; toast('リーダーにしました'); }
+    if (a === 'frd') { save.friend = id; toast('フレンドにしました'); }
+    if (a === 'home') { save.homeChar = id; toast('ホームに置きました'); }
+    store(); paintList(); d.classList.remove('on');
+  };
+}
+
+// ================= バトル =================
+const COLS = 7, ROWS = 6;
+const B = {};   // バトル状態
+const cv = $('board'), g = cv.getContext('2d');
+let cell = 50, dpr = 1;
+
+function startBattle() {
+  const mem = [...save.party, save.friend].map(id => ({...byId(id), cdNow: Math.ceil(byId(id).sk.cd / 2)}));
+  const leads = [mem[0].ls, mem[5].ls];
+  // HP倍率（リーダースキル）
+  let maxHp = 0;
+  mem.forEach(m => { let h = m.hp; leads.forEach(l => { if (l.hp && (!l.attrs || l.attrs.includes(m.attr))) h *= l.hp; }); maxHp += Math.round(h); });
+  Object.assign(B, {mem, leads, maxHp, hp:maxHp, floor:0, busy:false, buffs:[], target:0, lines:[], combos:0, timeLeft:0, running:false});
+  show('battle'); fit(); newBoard(); loadFloor(); paintParty(); paintHp();
+}
+function fit() {
+  const W = Math.min(innerWidth, 480);
+  cell = Math.floor(W / COLS);
+  dpr = Math.min(devicePixelRatio || 1, 2);
+  cv.width = cell * COLS * dpr; cv.height = cell * ROWS * dpr;
+  cv.style.width = cell * COLS + 'px'; cv.style.height = cell * ROWS + 'px';
+}
+addEventListener('resize', () => { if ($('battle').classList.contains('on')) fit(); });
+
+// ----- 盤面 -----
+let grid = [];      // grid[r][c] = {t, y(描画のずれ), s(消える演出 0-1)}
+const rnd = () => ORBS[Math.floor(Math.random() * ORBS.length)];
+function newBoard() { grid = []; for (let r = 0; r < ROWS; r++) { grid.push([]); for (let c = 0; c < COLS; c++) grid[r].push({t:rnd(), y:-(ROWS - r) * cell * 0 , s:0}); } }
+let parts = [];     // 消えるときの粒
+
+function drawOrb(x, y, rad, t, alpha=1, sel=false) {
+  const col = ATTR[t].c;
+  g.save(); g.globalAlpha = alpha;
+  const gr = g.createRadialGradient(x - rad*.35, y - rad*.4, rad*.1, x, y, rad);
+  gr.addColorStop(0, '#fff'); gr.addColorStop(.25, col); gr.addColorStop(1, shade(col, -.45));
+  g.fillStyle = gr; g.beginPath();
+  if (t === 'heart') heartPath(x, y + rad*.05, rad*1.05); else g.arc(x, y, rad, 0, Math.PI*2);
+  g.fill();
+  // 属性の記号
+  g.fillStyle = 'rgba(255,255,255,.9)'; g.font = `900 ${rad*.8}px 'Noto Sans JP'`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  if (t !== 'heart') g.fillText(ATTR[t].n, x, y + 1);
+  if (sel) { g.lineWidth = 3; g.strokeStyle = '#fff'; g.beginPath(); g.arc(x, y, rad + 3, 0, Math.PI*2); g.stroke(); }
+  g.restore();
+}
+function heartPath(x, y, r) {
+  g.moveTo(x, y + r*.75);
+  g.bezierCurveTo(x - r*1.1, y, x - r*.9, y - r*.95, x, y - r*.35);
+  g.bezierCurveTo(x + r*.9, y - r*.95, x + r*1.1, y, x, y + r*.75);
+}
+function shade(hex, p) {
+  const n = parseInt(hex.slice(1), 16); let r = n >> 16, gg = n >> 8 & 255, b = n & 255;
+  const f = v => Math.max(0, Math.min(255, Math.round(v + (p < 0 ? v * p : (255 - v) * p))));
+  return `rgb(${f(r)},${f(gg)},${f(b)})`;
+}
+
+let path = [];      // なぞっている途中のマス [{r,c}]
+function render() {
+  requestAnimationFrame(render);
+  if (!grid.length || !$('battle').classList.contains('on')) return;
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, cell*COLS, cell*ROWS);
+  // 市松の下地
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) { g.fillStyle = (r + c) % 2 ? '#1a1530' : '#221b3c'; g.fillRect(c*cell, r*cell, cell, cell); }
+  // 線
+  if (path.length > 1) {
+    const col = ATTR[grid[path[0].r][path[0].c].t].c;
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    [[cell*.34, col + '55'], [cell*.14, '#fff']].forEach(([w, s]) => {
+      g.lineWidth = w; g.strokeStyle = s; g.beginPath();
+      path.forEach((p, i) => { const x = p.c*cell + cell/2, y = p.r*cell + cell/2; i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke();
+    });
+  }
+  // 玉
+  const inPath = new Set(path.map(p => p.r * COLS + p.c));
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const o = grid[r][c]; if (!o) continue;
+    o.y += (0 - o.y) * .28; if (Math.abs(o.y) < .5) o.y = 0;
+    const sel = inPath.has(r * COLS + c);
+    const dim = path.length && !sel && grid[path[0].r][path[0].c].t !== o.t;
+    drawOrb(c*cell + cell/2, r*cell + cell/2 + o.y, cell*.4 * (sel ? 1.08 : 1), o.t, dim ? .45 : 1, sel);
+  }
+  // 粒
+  parts = parts.filter(p => p.life > 0);
+  parts.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += .25; p.life -= .035; g.globalAlpha = Math.max(0, p.life); g.fillStyle = p.c; g.beginPath(); g.arc(p.x, p.y, Math.max(0, p.r * p.life), 0, Math.PI*2); g.fill(); });
+  g.globalAlpha = 1;
+  // 残り時間
+  if (B.running) {
+    const left = Math.max(0, B.deadline - performance.now());
+    $('timer').firstElementChild.style.transform = `scaleX(${left / (B.limit * 1000)})`;
+    if (left <= 0) endInput();
+  }
+}
+requestAnimationFrame(render);
+
+// ----- なぞる -----
+function cellAt(e, strict) {
+  const rc = cv.getBoundingClientRect();
+  const x = e.clientX - rc.left, y = e.clientY - rc.top;
+  const c = Math.floor(x / cell), r = Math.floor(y / cell);
+  if (c < 0 || r < 0 || c >= COLS || r >= ROWS) return null;
+  // 斜めに通りやすいよう、マスの中心付近だけ当たりにする
+  if (strict) { const dx = x - (c*cell + cell/2), dy = y - (r*cell + cell/2); if (dx*dx + dy*dy > (cell*.42)**2) return null; }
+  return {r, c};
+}
+let drawing = false;
+cv.addEventListener('pointerdown', e => {
+  if (B.busy || !alive()) return;
+  const p = cellAt(e, false); if (!p) return;
+  cv.setPointerCapture(e.pointerId);
+  if (!B.running) startInput();
+  drawing = true; path = [p]; vib(6); snd(660, .05, .04);
+});
+cv.addEventListener('pointermove', e => {
+  if (!drawing) return;
+  const p = cellAt(e, true); if (!p) return;
+  const last = path[path.length - 1];
+  if (p.r === last.r && p.c === last.c) return;
+  // 一つ前に戻ったら取り消し
+  if (path.length > 1) { const pv = path[path.length - 2]; if (pv.r === p.r && pv.c === p.c) { path.pop(); snd(500, .04, .03); return; } }
+  if (Math.abs(p.r - last.r) > 1 || Math.abs(p.c - last.c) > 1) return;
+  if (path.some(q => q.r === p.r && q.c === p.c)) return;
+  if (grid[p.r][p.c].t !== grid[path[0].r][path[0].c].t) return;
+  path.push(p); vib(5); snd(600 + path.length * 55, .06, .045);
+});
+const up = () => { if (!drawing) return; drawing = false; commitLine(); };
+cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+
+function startInput() {
+  B.limit = 5 + B.buffs.filter(b => b.t === 'time').reduce((s, b) => s + b.sec, 0);
+  B.deadline = performance.now() + B.limit * 1000;
+  B.running = true; B.lines = []; B.combos = 0;
+}
+function commitLine() {
+  const p = path; path = [];
+  if (p.length < 3) return;
+  const t = grid[p[0].r][p[0].c].t;
+  B.lines.push({t, n:p.length}); B.combos++;
+  const cb = $('combo'); cb.innerHTML = B.combos + '<small> COMBO</small>'; cb.classList.add('on');
+  snd(880 + B.combos * 80, .12, .06, 'triangle'); vib(14);
+  // 消して、上から落とす
+  p.forEach(q => { for (let i = 0; i < 6; i++) parts.push({x:q.c*cell + cell/2, y:q.r*cell + cell/2, vx:(Math.random() - .5) * 6, vy:-Math.random() * 5, r:cell*.12, life:1, c:ATTR[t].c}); grid[q.r][q.c] = null; });
+  for (let c = 0; c < COLS; c++) {
+    // 残った玉を下から詰める（落ちた距離ぶん、上にずらして描き始める）
+    const keep = []; for (let r = ROWS - 1; r >= 0; r--) if (grid[r][c]) keep.push({o:grid[r][c], from:r});
+    const miss = ROWS - keep.length;
+    for (let k = 0, r = ROWS - 1; r >= 0; r--, k++) {
+      if (k < keep.length) { const {o, from} = keep[k]; o.y += (from - r) * cell; grid[r][c] = o; }
+      else grid[r][c] = {t:rnd(), y:-miss * cell, s:0};
+    }
+  }
+}
+function endInput() {
+  B.running = false;
+  if (drawing) { drawing = false; commitLine(); }
+  $('timer').firstElementChild.style.transform = 'scaleX(0)';
+  if (B.lines.length) resolveTurn(); else { toast('3個以上つなげてください'); }
+}
+
+// ----- 攻撃の計算 -----
+function lsMult(m, kind) {
+  let x = 1;
+  B.leads.forEach(l => {
+    if (kind === 'atk') {
+      if (l.t === 'attr' && l.attrs.includes(m.attr)) x *= l.atk;
+      if (l.t === 'combo' && B.combos >= l.min) x *= l.atk;
+      if (l.t === 'len' && B.lines.some(v => v.n >= l.min)) x *= l.atk;
+      if (l.t === 'all') x *= l.atk;
+    }
+    if (kind === 'rcv' && l.t === 'all' && l.rcv) x *= l.rcv;
+  });
+  return x;
+}
+const lenMult = n => 1 + (n - 3) * .25;               // 4個で1.25倍、6個で1.75倍
+const comboMult = () => 1 + (B.combos - 1) * .25;     // 2コンボで1.25倍
+
+async function resolveTurn() {
+  B.busy = true;
+  await sleep(250);
+  $('combo').classList.remove('on');
+  const cm = comboMult();
+  // 回復
+  const hearts = B.lines.filter(l => l.t === 'heart');
+  if (hearts.length) {
+    const rcv = B.mem.reduce((s, m) => s + m.rcv * lsMult(m, 'rcv'), 0);
+    const heal = Math.round(hearts.reduce((s, l) => s + rcv * lenMult(l.n), 0) * cm);
+    B.hp = Math.min(B.maxHp, B.hp + heal); paintHp(); popAt($('hp'), '+' + heal, '#9df07a'); snd(1200, .2, .05);
+    await sleep(300);
+  }
+  // 攻撃（メンバー順に）
+  const boost = B.buffs.filter(b => b.t === 'boost');
+  for (let i = 0; i < B.mem.length; i++) {
+    const m = B.mem[i];
+    const mine = B.lines.filter(l => l.t === m.attr); if (!mine.length) continue;
+    let dmg = mine.reduce((s, l) => s + m.atk * lenMult(l.n), 0) * cm * lsMult(m, 'atk');
+    boost.forEach(b => { if (b.attr === m.attr) dmg *= b.atk; });
+    const tg = pickTarget(); if (!tg) break;
+    hitEnemy(tg, Math.round(dmg), m.attr, i);
+    await sleep(170);
+  }
+  await sleep(350);
+  if (!alive()) return floorCleared();
+  // 敵の番
+  await enemyTurn();
+  // ターン経過：スキル・効果
+  B.mem.forEach(m => { if (m.cdNow > 0) m.cdNow--; });
+  B.buffs.forEach(b => b.turns--); B.buffs = B.buffs.filter(b => b.turns > 0);
+  paintParty(); paintHp();
+  B.busy = false;
+}
+function pickTarget() {
+  const al = B.enemies.filter(e => e.hp > 0);
+  return al.find(e => e.i === B.target) || al[0];
+}
+function hitEnemy(e, dmg, attr, memIdx) {
+  if (STRONG[attr] === e.attr) dmg *= 2;
+  if (STRONG[e.attr] === attr && attr !== 'light' && attr !== 'dark') dmg = Math.round(dmg / 2);
+  dmg = Math.round(dmg);
+  e.hp = Math.max(0, e.hp - dmg);
+  const el = e.el; el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit');
+  popAt(el, dmg.toLocaleString(), ATTR[attr].c);
+  if (memIdx !== undefined) { const pm = $('pt').children[memIdx]; pm.classList.remove('atk'); void pm.offsetWidth; pm.classList.add('atk'); }
+  snd(220 + Math.random() * 60, .1, .07, 'square'); vib(10);
+  paintEnemy(e);
+}
+async function enemyTurn() {
+  for (const e of B.enemies) {
+    if (e.hp <= 0) continue;
+    e.cdNow--;
+    if (e.cdNow <= 0) {
+      e.cdNow = e.cd;
+      let d = e.atk; B.buffs.filter(b => b.t === 'shield').forEach(b => d *= (1 - b.rate)); d = Math.round(d);
+      B.hp = Math.max(0, B.hp - d);
+      $('battle').classList.remove('shake'); void $('battle').offsetWidth; $('battle').classList.add('shake');
+      popAt($('hp'), '-' + d, '#ff5b4d'); snd(110, .25, .09, 'sawtooth'); vib(40);
+      paintHp(); await sleep(450);
+      if (B.hp <= 0) return lose();
+    }
+    paintEnemy(e);
+  }
+}
+
+// ----- スキル -----
+$('pt').addEventListener('click', async e => {
+  const pm = e.target.closest('.pm'); if (!pm || B.busy || B.running) return;
+  const m = B.mem[+pm.dataset.i];
+  if (m.cdNow > 0) { toast(`${m.sk.nm}：あと${m.cdNow}ターン`); return; }
+  B.busy = true;
+  await cutin(m);
+  const s = m.sk;
+  if (s.t === 'board') grid.forEach(row => row.forEach(o => { o.t = s.colors[Math.floor(Math.random() * s.colors.length)]; o.y = -cell * .4; }));
+  if (s.t === 'conv') grid.forEach(row => row.forEach(o => { if (o.t === s.from) { o.t = s.to; o.y = -cell * .4; } }));
+  if (s.t === 'heal') { B.hp = B.maxHp; popAt($('hp'), '全回復', '#9df07a'); }
+  if (s.t === 'shield') B.buffs.push({t:'shield', rate:s.rate, turns:s.turns});
+  if (s.t === 'time') B.buffs.push({t:'time', sec:s.sec, turns:s.turns});
+  if (s.t === 'boost') B.buffs.push({t:'boost', attr:s.attr, atk:s.atk, turns:s.turns});
+  if (s.t === 'nuke') { for (const en of B.enemies.filter(x => x.hp > 0)) { hitEnemy(en, m.atk * s.mult, s.attr); await sleep(150); } }
+  m.cdNow = s.cd; paintParty(); paintHp();
+  B.busy = false;
+  if (!alive()) floorCleared();
+});
+async function cutin(m) {
+  const c = $('cutin'); c.querySelector('img').src = 'ch_' + m.id + '.webp';
+  c.querySelector('p').textContent = m.sk.nm;
+  c.classList.remove('on'); void c.offsetWidth; c.classList.add('on');
+  snd(520, .3, .06, 'triangle'); setTimeout(() => snd(780, .4, .06, 'triangle'), 120); vib(20);
+  await sleep(950); c.classList.remove('on');
+}
+
+// ----- フロアと敵 -----
+function loadFloor() {
+  const fl = DUNGEON.floors[B.floor];
+  $('floor').textContent = (B.floor + 1) + '/' + DUNGEON.floors.length;
+  B.enemies = fl.map((d, i) => ({...d, i, hp:d.hp, max:d.hp, cdNow:d.cd}));
+  B.target = 0;
+  const box = $('enemies'); box.innerHTML = '';
+  B.enemies.forEach(e => {
+    const w = e.boss ? 200 : 104;
+    const el = document.createElement('div'); el.className = 'en'; el.style.width = w + 'px';
+    el.innerHTML = enemySVG(e, w) + `<div class="ehp"><i></i></div><div class="cd">あと<b class="num"></b></div>`;
+    el.onclick = () => { B.target = e.i; B.enemies.forEach(x => x.el.classList.toggle('tgt', x.i === e.i)); };
+    e.el = el; box.appendChild(el); paintEnemy(e);
+  });
+}
+// 仮の敵：属性の色をした、目のある結晶のかたまり（オリジナル図形）
+function enemySVG(e, w) {
+  const c = ATTR[e.attr].c, d = shade(c, -.55), h = Math.round(w * (e.boss ? 1.05 : .95));
+  const body = e.boss
+    ? `<path d="M100 8 L150 60 L188 52 L170 120 L196 170 L130 196 L70 196 L4 170 L30 120 L12 52 L50 60 Z" fill="url(#g${e.i})" stroke="${d}" stroke-width="4"/>
+       <path d="M60 110 L88 120 M140 110 L112 120" stroke="#fff" stroke-width="7" stroke-linecap="round"/><circle cx="76" cy="132" r="8" fill="#fff"/><circle cx="124" cy="132" r="8" fill="#fff"/>
+       <path d="M80 165 Q100 152 120 165" stroke="${d}" stroke-width="6" fill="none" stroke-linecap="round"/>`
+    : `<path d="M100 30 C150 30 180 90 180 140 C180 180 150 196 100 196 C50 196 20 180 20 140 C20 90 50 30 100 30 Z" fill="url(#g${e.i})" stroke="${d}" stroke-width="4"/>
+       <circle cx="78" cy="125" r="11" fill="#fff"/><circle cx="122" cy="125" r="11" fill="#fff"/><circle cx="80" cy="127" r="5" fill="${d}"/><circle cx="124" cy="127" r="5" fill="${d}"/>
+       <ellipse cx="70" cy="70" rx="16" ry="10" fill="rgba(255,255,255,.45)"/>`;
+  return `<svg class="ebody" width="${w}" height="${h}" viewBox="0 0 200 200"><defs><radialGradient id="g${e.i}" cx=".35" cy=".3"><stop offset="0" stop-color="#fff"/><stop offset=".3" stop-color="${c}"/><stop offset="1" stop-color="${d}"/></radialGradient></defs>${body}</svg>`;
+}
+function paintEnemy(e) {
+  e.el.querySelector('.ehp i').style.width = (e.hp / e.max * 100) + '%';
+  const cd = e.el.querySelector('.cd'); cd.querySelector('b').textContent = e.cdNow; cd.classList.toggle('warn', e.cdNow <= 1);
+  e.el.classList.toggle('dead', e.hp <= 0);
+}
+const alive = () => B.enemies && B.enemies.some(e => e.hp > 0);
+async function floorCleared() {
+  B.busy = true; snd(990, .3, .06, 'triangle');
+  await sleep(700);
+  B.floor++;
+  if (B.floor >= DUNGEON.floors.length) return win();
+  // 次のフロアでもスキルは1ターン進む
+  B.mem.forEach(m => { if (m.cdNow > 0) m.cdNow--; }); paintParty();
+  loadFloor(); B.busy = false;
+}
+function win() { over('CLEAR', DUNGEON.name + ' を突破しました', 'もう一度', () => startBattle()); for (let i = 0; i < 4; i++) setTimeout(() => snd(880 * [1, 1.25, 1.5, 2][i], .3, .06, 'triangle'), i * 110); }
+function lose() { over('LOSE', 'パーティーが倒れました', 'やり直す', () => startBattle()); B.busy = true; }
+function over(t, p, btn, fn) { $('ovT').textContent = t; $('ovP').textContent = p; $('ovA').textContent = btn; $('ovA').onclick = () => { $('over').classList.remove('on'); fn(); }; $('over').classList.add('on'); }
+$('retreat').onclick = () => { if (!B.running) goHome(); };
+
+// ----- 表示 -----
+function paintParty() {
+  $('pt').innerHTML = B.mem.map((m, i) => `<button class="pm ${m.cdNow <= 0 ? 'ready' : ''}" data-i="${i}" style="--c:${ATTR[m.attr].c}">
+    <img src="ic_${m.id}.webp" alt=""><i class="at" style="background:${ATTR[m.attr].c}"></i><span class="sc num">${m.cdNow <= 0 ? 'SKILL' : m.cdNow}</span></button>`).join('');
+}
+function paintHp() {
+  const r = B.hp / B.maxHp, el = $('hp');
+  el.querySelector('i').style.transform = `scaleX(${r})`; el.classList.toggle('low', r < .3);
+  el.querySelector('span').textContent = `${B.hp.toLocaleString()} / ${B.maxHp.toLocaleString()}`;
+  $('shield').classList.toggle('on', B.buffs.some(b => b.t === 'shield'));
+}
+function popAt(el, txt, col) {
+  const f = $('field').getBoundingClientRect(), r = el.getBoundingClientRect();
+  const p = document.createElement('div'); p.className = 'pop num'; p.textContent = txt; p.style.color = col;
+  p.style.left = (r.left - f.left + r.width / 2 + (Math.random() - .5) * 30) + 'px';
+  p.style.top = Math.min(f.height - 40, r.top - f.top + r.height * .3) + 'px';
+  $('field').appendChild(p); setTimeout(() => p.remove(), 950);
+}
+
+goHome();
+</script>
+</body>
+</html>
